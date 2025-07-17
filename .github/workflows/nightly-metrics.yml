@@ -9,6 +9,7 @@ on:
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
+    environment: main
 
     steps:
       - name: Check out code
@@ -21,9 +22,7 @@ jobs:
           OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
           OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
         run: |
-          echo "GITHUB_TOKEN is set: ${GITHUB_TOKEN:+true}"
           echo "OTEL_EXPORTER_OTLP_ENDPOINT is set: ${OTEL_EXPORTER_OTLP_ENDPOINT:+true}"
-          echo "OTEL_EXPORTER_OTLP_HEADERS is set: ${OTEL_EXPORTER_OTLP_HEADERS:+true}"
           docker build -t github-metrics .
           docker run \
             -e GITHUB_TOKEN="$GITHUB_TOKEN" \
