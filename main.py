@@ -43,12 +43,13 @@ def fetch_github_metrics():
             # The number of open issues includes PRs, so we subtract them.
             open_issues_count = repo.open_issues_count - open_pulls_count
 
-            print(f"  - {repo_name}: Issues={open_issues_count}, PRs={open_pulls_count}")
+            print(f"  - {repo_name}: Issues={open_issues_count}, PRs={open_pulls_count}, Stars={repo.stargazers_count}")
 
             repo_tag = repo_name.replace("open-telemetry/", "")
 
             meter.create_gauge("repo.issues.open").set(open_issues_count, {"repo": repo_tag})
             meter.create_gauge("repo.prs.open").set(open_pulls_count, {"repo": repo_tag})
+            meter.create_gauge("repo.stars.count").set(repo.stargazers_count, {"repo": repo_tag})
 
         except Exception as e:
             print(f"Error fetching data for {repo_name}: {e}")

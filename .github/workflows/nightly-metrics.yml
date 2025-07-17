@@ -3,7 +3,7 @@ name: Nightly Metrics
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Runs every day at midnight UTC
+    - cron: '0 */12 * * *'  # Runs every 12 hours (at 00:00 and 12:00 UTC)
   workflow_dispatch: # Allows manual triggering
 
 jobs:
