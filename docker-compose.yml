@@ -1,4 +1,3 @@
-version: '3'
 services:
   collector:
     image: grafana/otel-lgtm:0.11.5
@@ -6,3 +5,7 @@ services:
       - "4317:4317"   # gRPC OTLP
       - "4318:4318"   # http OTLP
       - "3000:3000"   # grafana UI
+    volumes:
+      - ./dashboards/java-repo-meta-cloud.json:/otel-lgtm/java-repo-meta-cloud.json
+      - ./dashboards/java-repo-meta-local.json:/otel-lgtm/java-repo-meta-local.json
+      - ./grafana/provisioning/dashboards/dashboards.yml:/otel-lgtm/grafana/conf/provisioning/dashboards/java-repo.yaml

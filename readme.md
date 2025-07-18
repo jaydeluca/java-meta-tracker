@@ -3,6 +3,8 @@
 This project provides a GitHub Action to collect various metrics from GitHub repositories and send them to a Grafana
 Cloud instance (or any OpenTelemetry-compatible metrics backend).
 
+![screenshot](./img/dashboard-screenshot.png)
+
 ## What it Does
 
 The script `main.py` performs the following actions:
@@ -50,6 +52,7 @@ To run and test this project locally, you can use Docker Compose to set up a loc
 
 4.  **View Metrics in Grafana:**
     Open your browser to `http://localhost:3000`. You can then use the Explore view to query for metrics like `repo.issues.open` or `instrumentation.libraries.total`.
+    There are also pre-built dashboards for both cloud and local development
 
 ## GitHub Action Setup
 

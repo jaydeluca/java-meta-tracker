@@ -1,0 +1,15 @@
+apiVersion: 1
+
+providers:
+  - name: "Java Repo Meta (Local Dev)"
+    type: file
+    editable: true
+    options:
+      path: /otel-lgtm/java-repo-meta-local.json
+      foldersFromFilesStructure: false
+  - name: "Java Repo Meta (Grafana Cloud)"
+    type: file
+    editable: true
+    options:
+      path: /otel-lgtm/java-repo-meta-cloud.json
+      foldersFromFilesStructure: false
