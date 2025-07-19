@@ -28,7 +28,9 @@ def fetch_github_metrics(github_client: Github):
 
     repos = [
         "open-telemetry/opentelemetry-java-instrumentation",
-        "open-telemetry/opentelemetry-java"
+        "open-telemetry/opentelemetry-java",
+        "open-telemetry/opentelemetry-java-contrib",
+        "open-telemetry/opentelemetry-java-examples"
     ]
 
     for repo_name in repos:
