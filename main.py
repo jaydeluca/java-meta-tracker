@@ -30,7 +30,8 @@ def fetch_github_metrics(github_client: Github):
         "open-telemetry/opentelemetry-java-instrumentation",
         "open-telemetry/opentelemetry-java",
         "open-telemetry/opentelemetry-java-contrib",
-        "open-telemetry/opentelemetry-java-examples"
+        "open-telemetry/opentelemetry-java-examples",
+        "prometheus/client_java"
     ]
 
     for repo_name in repos:
