@@ -233,13 +233,33 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 2):
         for run in runs:
             runs_total += 1
 
-            # Only track main branch builds
-            if run.head_branch != "main":
+            # Track main branch builds (push events) and PR #14748 builds (pull_request events)
+            is_pr_14748 = False
+            if run.event == "pull_request":
+                # Check if this is PR #14748
+                try:
+                    # Get the PR number from the run
+                    if hasattr(run, 'pull_requests') and len(run.pull_requests) > 0:
+                        pr_number = run.pull_requests[0].number
+                        if pr_number == 14748:
+                            is_pr_14748 = True
+                        else:
+                            # Skip other PR builds
+                            runs_skipped_branch += 1
+                            continue
+                    else:
+                        # Skip PR builds without PR number
+                        runs_skipped_branch += 1
+                        continue
+                except Exception:
+                    runs_skipped_branch += 1
+                    continue
+            elif run.event == "push" and run.head_branch == "main":
+                # Main branch builds
+                pass
+            else:
+                # Skip all other events/branches
                 runs_skipped_branch += 1
-                continue
-
-            # Track push events (main branch builds)
-            if run.event != "push":
                 continue
 
             # Only process completed runs
@@ -264,7 +284,8 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 2):
                     "repo": "opentelemetry-java-instrumentation",
                     "workflow": "build",
                     "conclusion": run.conclusion or "unknown",
-                    "event": run.event
+                    "event": run.event,
+                    "is_build_test": "true" if is_pr_14748 else "false"
                 }
 
                 workflow_duration_histogram.record(duration_minutes, attributes)
