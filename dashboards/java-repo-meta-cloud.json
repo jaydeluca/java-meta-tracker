@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 26,
+  "id": 0,
   "links": [],
   "panels": [
     {
@@ -55,6 +55,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": true,
             "stacking": {
               "group": "A",
@@ -101,7 +102,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.1.0-91295",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -156,6 +157,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": true,
             "stacking": {
               "group": "A",
@@ -203,7 +205,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.1.0-91295",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -258,6 +260,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": true,
             "stacking": {
               "group": "A",
@@ -304,7 +307,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.1.0-91295",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -359,6 +362,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": true,
             "stacking": {
               "group": "A",
@@ -405,7 +409,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.1.0-91295",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -460,6 +464,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
+            "showValues": false,
             "spanNulls": true,
             "stacking": {
               "group": "A",
@@ -506,7 +511,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.1.0-91295",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -577,7 +582,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.1.0-91295",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "disableTextWrap": false,
@@ -676,7 +681,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.1.0-91295",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "disableTextWrap": false,
@@ -759,6 +764,7 @@
               "type": "linear"
             },
             "showPoints": "always",
+            "showValues": false,
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -773,7 +779,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -839,7 +846,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.0.2",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -848,7 +855,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by(le, is_build_test) (workflow_run_duration_minutes_bucket{conclusion=\"success\"}))",
+          "expr": "histogram_quantile(0.50, sum by(le, is_build_test) (workflow_run_duration_minutes_bucket{}))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "P50 (is_build_test={{is_build_test}})",
@@ -863,7 +870,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by(le, is_build_test) (workflow_run_duration_minutes_bucket{conclusion=\"success\"}))",
+          "expr": "histogram_quantile(0.95, sum by(le, is_build_test) (workflow_run_duration_minutes_bucket{}))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "P95 (is_build_test={{is_build_test}})",
@@ -878,7 +885,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by(le, is_build_test) (workflow_run_duration_minutes_bucket{conclusion=\"success\"}))",
+          "expr": "histogram_quantile(0.99, sum by(le, is_build_test) (workflow_run_duration_minutes_bucket{}))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "P99 (is_build_test={{is_build_test}})",
@@ -905,7 +912,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -948,7 +956,7 @@
         "sizing": "auto",
         "text": {}
       },
-      "pluginVersion": "12.0.2",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -957,7 +965,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by(le) (workflow_run_duration_minutes_bucket{conclusion=\"success\",is_build_test=\"false\"}))",
+          "expr": "histogram_quantile(0.50, sum by(le) (workflow_run_duration_minutes_bucket{,is_build_test=\"false\"}))",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -985,7 +993,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -1007,7 +1016,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
+        "w": 5,
         "x": 0,
         "y": 22
       },
@@ -1030,7 +1039,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.2",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -1067,7 +1076,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -1085,8 +1095,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 8,
+        "w": 5,
+        "x": 5,
         "y": 22
       },
       "id": 11,
@@ -1108,7 +1118,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.2",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -1145,7 +1155,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -1159,8 +1170,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 10,
         "y": 22
       },
       "id": 12,
@@ -1182,7 +1193,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.2",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -1219,7 +1230,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -1237,8 +1249,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
+        "w": 8,
+        "x": 16,
         "y": 22
       },
       "id": 13,
@@ -1260,7 +1272,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "12.0.2",
+      "pluginVersion": "12.3.0-18356121373.patch3",
       "targets": [
         {
           "datasource": {
@@ -1284,7 +1296,7 @@
     }
   ],
   "preload": false,
-  "schemaVersion": 41,
+  "schemaVersion": 42,
   "tags": [],
   "templating": {
     "list": [
@@ -1310,12 +1322,12 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "Java Repo Meta (Cloud)",
   "uid": "jaxn92ssss",
-  "version": 14
+  "version": 2
 }
