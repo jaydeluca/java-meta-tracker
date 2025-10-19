@@ -192,7 +192,7 @@ def fetch_instrumentation_metrics(g: Github):
 
 def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 2):
     """
-    Fetches workflow run duration metrics for main branch builds.
+    Fetches workflow run duration metrics for main branch builds and PR builds.
 
     Args:
         github_client: Authenticated GitHub client
@@ -208,99 +208,100 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 2):
         since_date = datetime.now() - timedelta(hours=lookback_hours)
         date_filter = since_date.strftime("%Y-%m-%dT%H:%M:%S")
 
-        # Find the "Build" workflow
+        # Find both "Build" and "Build pull request" workflows
         workflows = repo.get_workflows()
-        build_workflow = None
+        build_workflows = []
         for wf in workflows:
             if wf.name == "Build" or "build.yml" in wf.path:
-                build_workflow = wf
+                build_workflows.append(wf)
                 print(f"  Found workflow: {wf.name} ({wf.path})")
-                break
+            elif wf.name == "Build pull request" or "build-pull-request.yml" in wf.path:
+                build_workflows.append(wf)
+                print(f"  Found workflow: {wf.name} ({wf.path})")
 
-        if not build_workflow:
-            print("  Warning: Build workflow not found")
+        if not build_workflows:
+            print("  Warning: No build workflows found")
             return
-
-        # Get workflow runs (both push and pull_request events)
-        runs = build_workflow.get_runs(
-            created=f">={date_filter}"
-        )
 
         runs_processed = 0
         runs_total = 0
         runs_incomplete = 0
         runs_skipped_branch = 0
-        for run in runs:
-            runs_total += 1
 
-            # Track main branch builds (push events) and PR #14748 builds (pull_request events)
-            is_pr_14748 = False
-            if run.event == "pull_request":
-                # Check if this is PR #14748
-                try:
-                    # Get the PR number from the run
-                    if hasattr(run, 'pull_requests') and len(run.pull_requests) > 0:
-                        pr_number = run.pull_requests[0].number
-                        if pr_number == 14748:
-                            is_pr_14748 = True
-                        else:
-                            # Skip other PR builds
-                            runs_skipped_branch += 1
-                            continue
-                    else:
-                        # Skip PR builds without PR number
-                        runs_skipped_branch += 1
-                        continue
-                except Exception:
+        # Process runs from all build workflows
+        for build_workflow in build_workflows:
+            print(f"  Processing workflow: {build_workflow.name}")
+
+            # Get workflow runs (both push and pull_request events)
+            runs = build_workflow.get_runs(
+                created=f">={date_filter}"
+            )
+
+            for run in runs:
+                runs_total += 1
+
+                # Track main branch builds (push events) and all PR builds (pull_request events)
+                is_pr_14748 = False
+
+                if run.event == "pull_request":
+                    # Track all PR builds, but mark PR #14748 specially
+                    try:
+                        # Get the PR number from the run
+                        if hasattr(run, 'pull_requests') and len(run.pull_requests) > 0:
+                            pr_number = run.pull_requests[0].number
+                            if pr_number == 14748:
+                                is_pr_14748 = True
+                        # Continue processing all PR builds
+                    except Exception:
+                        # If we can't get PR number, still track it
+                        pass
+                elif run.event == "push" and run.head_branch == "main":
+                    # Main branch builds
+                    pass
+                else:
+                    # Skip all other events/branches (e.g., release branches, scheduled runs)
                     runs_skipped_branch += 1
                     continue
-            elif run.event == "push" and run.head_branch == "main":
-                # Main branch builds
-                pass
-            else:
-                # Skip all other events/branches
-                runs_skipped_branch += 1
-                continue
 
-            # Only process completed runs
-            if run.status != "completed":
-                runs_incomplete += 1
-                continue
-
-            try:
-                # Get timing data
-                timing_data = run.timing()
-
-                if not timing_data:
+                # Only process completed runs
+                if run.status != "completed":
+                    runs_incomplete += 1
                     continue
 
-                if not hasattr(timing_data, 'run_duration_ms'):
+                try:
+                    # Get timing data
+                    timing_data = run.timing()
+
+                    if not timing_data:
+                        continue
+
+                    if not hasattr(timing_data, 'run_duration_ms'):
+                        continue
+
+                    duration_ms = timing_data.run_duration_ms
+                    duration_minutes = duration_ms / 1000 / 60
+
+                    attributes = {
+                        "repo": "opentelemetry-java-instrumentation",
+                        "workflow": "build",
+                        "conclusion": run.conclusion or "unknown",
+                        "event": run.event,
+                        "is_build_test": "true" if is_pr_14748 else "false"
+                    }
+
+                    workflow_duration_histogram.record(duration_minutes, attributes)
+
+                    if runs_processed == 0:
+                        print(f"  Debug: Recording histogram value {duration_minutes} minutes with attributes {attributes}")
+
+                    runs_processed += 1
+
+                    if runs_processed <= 5:  # Print first 5 for debugging
+                        print(f"  - Run #{run.run_number} (event={run.event}): {duration_minutes:.1f} minutes, conclusion={run.conclusion}")
+
+                except Exception as e:
+                    print(f"  Warning: Could not fetch timing for run {run.id}: {e}")
                     continue
-
-                duration_ms = timing_data.run_duration_ms
-                duration_minutes = duration_ms / 1000 / 60
-
-                attributes = {
-                    "repo": "opentelemetry-java-instrumentation",
-                    "workflow": "build",
-                    "conclusion": run.conclusion or "unknown",
-                    "event": run.event,
-                    "is_build_test": "true" if is_pr_14748 else "false"
-                }
-
-                workflow_duration_histogram.record(duration_minutes, attributes)
-
-                if runs_processed == 0:
-                    print(f"  Debug: Recording histogram value {duration_minutes} minutes with attributes {attributes}")
-
-                runs_processed += 1
-
-                if runs_processed <= 5:  # Print first 5 for debugging
-                    print(f"  - Run #{run.run_number} (event={run.event}): {duration_minutes:.1f} minutes, conclusion={run.conclusion}")
-
-            except Exception as e:
-                print(f"  Warning: Could not fetch timing for run {run.id}: {e}")
-                continue
 
         print(f"  Total runs found: {runs_total}")
         print(f"  Non-main branch runs skipped: {runs_skipped_branch}")
