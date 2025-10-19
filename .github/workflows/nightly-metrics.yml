@@ -5,6 +5,12 @@ on:
   schedule:
     - cron: '0 * * * *'  # Runs every hour at minute 0
   workflow_dispatch: # Allows manual triggering
+    inputs:
+      lookback_hours:
+        description: 'Hours to look back for workflow runs'
+        required: false
+        default: '1'
+        type: string
 
 jobs:
   build-and-run:
@@ -21,13 +27,15 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
           OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+          LOOKBACK_HOURS: ${{ inputs.lookback_hours || '1' }}
         run: |
           echo "OTEL_EXPORTER_OTLP_ENDPOINT is set: ${OTEL_EXPORTER_OTLP_ENDPOINT:+true}"
+          echo "WORKFLOW_LOOKBACK_HOURS: $LOOKBACK_HOURS"
           docker build -t github-metrics .
           docker run \
             -e GITHUB_TOKEN="$GITHUB_TOKEN" \
             -e OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT" \
             -e OTEL_EXPORTER_OTLP_HEADERS="$OTEL_EXPORTER_OTLP_HEADERS" \
             -e OTEL_EXPORTER_OTLP_PROTOCOL="$OTEL_EXPORTER_OTLP_PROTOCOL" \
-            -e WORKFLOW_LOOKBACK_HOURS="1" \
+            -e WORKFLOW_LOOKBACK_HOURS="$LOOKBACK_HOURS" \
             github-metrics
