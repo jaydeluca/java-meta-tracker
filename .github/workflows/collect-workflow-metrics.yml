@@ -1,0 +1,70 @@
+name: Collect Workflow Metrics
+
+on:
+  schedule:
+    # Run every hour to catch completed workflow runs
+    - cron: '0 * * * *'
+  
+  workflow_dispatch:
+    inputs:
+      lookback_hours:
+        description: 'Hours to look back for workflow runs'
+        required: false
+        default: '3'
+        type: string
+
+jobs:
+  collect-workflow-metrics:
+    runs-on: ubuntu-latest
+    environment: main
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      
+      # Restore deduplication state from previous run
+      - name: Restore state cache
+        uses: actions/cache/restore@v3
+        with:
+          path: ./state
+          key: workflow-state-${{ github.run_id }}
+          restore-keys: |
+            workflow-state-
+      
+      - name: Build and run Docker container
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+          OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+          LOOKBACK_HOURS: ${{ inputs.lookback_hours || '3' }}
+        run: |
+          echo "OTEL_EXPORTER_OTLP_ENDPOINT is set: ${OTEL_EXPORTER_OTLP_ENDPOINT:+true}"
+          echo "WORKFLOW_LOOKBACK_HOURS: $LOOKBACK_HOURS"
+          docker build -t github-workflow-metrics -f Dockerfile.workflow .
+          docker run \
+            -e GITHUB_TOKEN="$GITHUB_TOKEN" \
+            -e OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT" \
+            -e OTEL_EXPORTER_OTLP_HEADERS="$OTEL_EXPORTER_OTLP_HEADERS" \
+            -e OTEL_EXPORTER_OTLP_PROTOCOL="$OTEL_EXPORTER_OTLP_PROTOCOL" \
+            -e WORKFLOW_LOOKBACK_HOURS="$LOOKBACK_HOURS" \
+            -v "$(pwd)/state:/app/state" \
+            github-workflow-metrics
+      
+      # Save state for next run (always run even if previous steps fail)
+      - name: Save state cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: ./state
+          key: workflow-state-${{ github.run_id }}
+      
+      - name: Upload state as artifact (for debugging)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: workflow-state
+          path: ./state/processed_workflow_runs.json
+          retention-days: 7
+          if-no-files-found: ignore
+

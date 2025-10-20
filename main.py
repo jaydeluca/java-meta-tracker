@@ -1,32 +1,21 @@
 import os
 import time
 import yaml
-from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from github import Github
 
 from opentelemetry import metrics
-from opentelemetry.sdk.metrics import MeterProvider, Counter, Histogram
+from opentelemetry.sdk.metrics import MeterProvider, Counter
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader, AggregationTemporality
-from opentelemetry.sdk.metrics.view import View
-from opentelemetry.sdk.metrics._internal.aggregation import ExplicitBucketHistogramAggregation
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.resources import Resource
 
-resource = Resource.create({"service.name": "github-metrics"})
-
-workflow_duration_view = View(
-    instrument_name="workflow_run_duration_minutes",
-    aggregation=ExplicitBucketHistogramAggregation(
-        boundaries=(5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 75, 90, 120, 180)
-    )
-)
+resource = Resource.create({"service.name": "github-snapshot-metrics"})
 
 # OTLP exporter with cumulative temporality is required for Prometheus/Mimir in Grafana
 otlp_exporter = OTLPMetricExporter(
     preferred_temporality={
-        Histogram: AggregationTemporality.CUMULATIVE,
         Counter: AggregationTemporality.CUMULATIVE,
     }
 )
@@ -34,18 +23,11 @@ otlp_reader = PeriodicExportingMetricReader(otlp_exporter, export_interval_milli
 
 provider = MeterProvider(
     resource=resource,
-    metric_readers=[otlp_reader],
-    views=[workflow_duration_view]
+    metric_readers=[otlp_reader]
 )
 metrics.set_meter_provider(provider)
 
-meter = metrics.get_meter("github.metrics.meter")
-
-workflow_duration_histogram = meter.create_histogram(
-    name="workflow_run_duration_minutes",
-    description="Duration of workflow runs in minutes",
-    unit="minutes"
-)
+meter = metrics.get_meter("github.snapshot.metrics.meter")
 
 
 def fetch_github_metrics(github_client: Github):
@@ -190,142 +172,21 @@ def fetch_instrumentation_metrics(g: Github):
     print(f"    Libraries with telemetry: {parser.libraries_with_telemetry}")
 
 
-def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 2):
-    """
-    Fetches workflow run duration metrics for main branch builds and PR builds.
-
-    Args:
-        github_client: Authenticated GitHub client
-        lookback_hours: Number of hours to look back for workflow runs (default 2, use larger values for backfill)
-    """
-    print(f"Fetching workflow run metrics (last {lookback_hours} hours)...")
-    repo_name = "open-telemetry/opentelemetry-java-instrumentation"
-
-    try:
-        repo = github_client.get_repo(repo_name)
-
-        # Calculate date filter
-        since_date = datetime.now() - timedelta(hours=lookback_hours)
-        date_filter = since_date.strftime("%Y-%m-%dT%H:%M:%S")
-
-        # Find both "Build" and "Build pull request" workflows
-        workflows = repo.get_workflows()
-        build_workflows = []
-        for wf in workflows:
-            if wf.name == "Build" or "build.yml" in wf.path:
-                build_workflows.append(wf)
-                print(f"  Found workflow: {wf.name} ({wf.path})")
-            elif wf.name == "Build pull request" or "build-pull-request.yml" in wf.path:
-                build_workflows.append(wf)
-                print(f"  Found workflow: {wf.name} ({wf.path})")
-
-        if not build_workflows:
-            print("  Warning: No build workflows found")
-            return
-
-        runs_processed = 0
-        runs_total = 0
-        runs_incomplete = 0
-        runs_skipped_branch = 0
-
-        # Process runs from all build workflows
-        for build_workflow in build_workflows:
-            print(f"  Processing workflow: {build_workflow.name}")
-
-            # Get workflow runs (both push and pull_request events)
-            runs = build_workflow.get_runs(
-                created=f">={date_filter}"
-            )
-
-            for run in runs:
-                runs_total += 1
-
-                # Track main branch builds (push events) and all PR builds (pull_request events)
-                is_pr_14748 = False
-
-                if run.event == "pull_request":
-                    # Track all PR builds, but mark PR #14748 specially
-                    try:
-                        # Get the PR number from the run
-                        if hasattr(run, 'pull_requests') and len(run.pull_requests) > 0:
-                            pr_number = run.pull_requests[0].number
-                            if pr_number == 14748:
-                                is_pr_14748 = True
-                        # Continue processing all PR builds
-                    except Exception:
-                        # If we can't get PR number, still track it
-                        pass
-                elif run.event == "push" and run.head_branch == "main":
-                    # Main branch builds
-                    pass
-                else:
-                    # Skip all other events/branches (e.g., release branches, scheduled runs)
-                    runs_skipped_branch += 1
-                    continue
-
-                # Only process completed runs
-                if run.status != "completed":
-                    runs_incomplete += 1
-                    continue
-
-                try:
-                    # Get timing data
-                    timing_data = run.timing()
-
-                    if not timing_data:
-                        continue
-
-                    if not hasattr(timing_data, 'run_duration_ms'):
-                        continue
-
-                    duration_ms = timing_data.run_duration_ms
-                    duration_minutes = duration_ms / 1000 / 60
-
-                    attributes = {
-                        "repo": "opentelemetry-java-instrumentation",
-                        "workflow": "build",
-                        "conclusion": run.conclusion or "unknown",
-                        "event": run.event,
-                        "is_build_test": "true" if is_pr_14748 else "false"
-                    }
-
-                    workflow_duration_histogram.record(duration_minutes, attributes)
-
-                    if runs_processed == 0:
-                        print(f"  Debug: Recording histogram value {duration_minutes} minutes with attributes {attributes}")
-
-                    runs_processed += 1
-
-                    if runs_processed <= 5:  # Print first 5 for debugging
-                        print(f"  - Run #{run.run_number} (event={run.event}): {duration_minutes:.1f} minutes, conclusion={run.conclusion}")
-
-                except Exception as e:
-                    print(f"  Warning: Could not fetch timing for run {run.id}: {e}")
-                    continue
-
-        print(f"  Total runs found: {runs_total}")
-        print(f"  Non-main branch runs skipped: {runs_skipped_branch}")
-        print(f"  Incomplete runs skipped: {runs_incomplete}")
-        print(f"  Processed {runs_processed} main branch workflow runs")
-
-    except Exception as e:
-        print(f"Error fetching workflow run metrics for {repo_name}: {e}")
-
-
 if __name__ == "__main__":
     github_token = os.environ.get("GITHUB_TOKEN")
     if not github_token:
         raise ValueError("GITHUB_TOKEN environment variable not set.")
+    
     g = Github(github_token)
 
-    # Get lookback period for workflow metrics (default 2 hours, set higher for backfill)
-    workflow_lookback_hours = int(os.environ.get("WORKFLOW_LOOKBACK_HOURS", "2"))
+    print("=" * 60)
+    print("GitHub Snapshot Metrics Collection")
+    print("=" * 60)
 
     fetch_github_metrics(g)
     fetch_instrumentation_metrics(g)
-    fetch_workflow_run_metrics(g, lookback_hours=workflow_lookback_hours)
-    print("All metrics collected. Flushing metrics before exit...")
-
+    
+    print("\nAll snapshot metrics collected. Flushing metrics before exit...")
     provider.force_flush()
 
     print("Metrics flushed. The script will exit after 5 seconds.")
