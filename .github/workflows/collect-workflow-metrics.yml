@@ -2,8 +2,8 @@ name: Collect Workflow Metrics
 
 on:
   schedule:
-    # Run every hour to catch completed workflow runs
-    - cron: '0 * * * *'
+    # Run every 10 minutes to catch completed workflow runs
+    - cron: '*/10 * * * *'
   
   workflow_dispatch:
     inputs:
