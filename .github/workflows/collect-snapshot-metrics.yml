@@ -1,29 +1,21 @@
-
-name: Nightly Metrics (Legacy)
-
-# NOTE: This workflow is kept for backward compatibility.
-# It now only collects snapshot metrics (repo stats, instrumentation data).
-# 
-# For new deployments, use:
-# - collect-snapshot-metrics.yml for repo/instrumentation metrics
-# - collect-workflow-metrics.yml for workflow duration metrics
-#
-# This workflow will be deprecated in a future release.
+name: Collect Snapshot Metrics
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Runs every hour at minute 0
-  workflow_dispatch: # Allows manual triggering
+    # Run every hour for repo and instrumentation metrics
+    - cron: '0 * * * *'
+  
+  workflow_dispatch:
 
 jobs:
-  build-and-run:
+  collect-snapshot-metrics:
     runs-on: ubuntu-latest
     environment: main
-
+    
     steps:
       - name: Check out code
         uses: actions/checkout@v3
-
+      
       - name: Build and run Docker container
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -32,10 +24,11 @@ jobs:
           OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
         run: |
           echo "OTEL_EXPORTER_OTLP_ENDPOINT is set: ${OTEL_EXPORTER_OTLP_ENDPOINT:+true}"
-          docker build -t github-metrics .
+          docker build -t github-snapshot-metrics -f Dockerfile.snapshot .
           docker run \
             -e GITHUB_TOKEN="$GITHUB_TOKEN" \
             -e OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT" \
             -e OTEL_EXPORTER_OTLP_HEADERS="$OTEL_EXPORTER_OTLP_HEADERS" \
             -e OTEL_EXPORTER_OTLP_PROTOCOL="$OTEL_EXPORTER_OTLP_PROTOCOL" \
-            github-metrics
+            github-snapshot-metrics
+
