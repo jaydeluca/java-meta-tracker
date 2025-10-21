@@ -9,7 +9,7 @@ builds that take longer than the collection interval to complete.
 import os
 import time
 from datetime import datetime, timedelta
-from github import Github
+from github import Github, Auth
 
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider, Histogram
@@ -195,7 +195,9 @@ if __name__ == "__main__":
     if not github_token:
         raise ValueError("GITHUB_TOKEN environment variable not set.")
     
-    g = Github(github_token)
+    # Use the new authentication method
+    auth = Auth.Token(github_token)
+    g = Github(auth=auth)
 
     # Get lookback period for workflow metrics (default 3 hours)
     workflow_lookback_hours = int(os.environ.get("WORKFLOW_LOOKBACK_HOURS", "3"))

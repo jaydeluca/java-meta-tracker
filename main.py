@@ -3,7 +3,7 @@ import time
 import yaml
 from typing import Dict, List, Optional
 
-from github import Github
+from github import Github, Auth
 
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider, Counter
@@ -177,7 +177,8 @@ if __name__ == "__main__":
     if not github_token:
         raise ValueError("GITHUB_TOKEN environment variable not set.")
     
-    g = Github(github_token)
+    auth = Auth.Token(github_token)
+    g = Github(auth=auth)
 
     print("=" * 60)
     print("GitHub Snapshot Metrics Collection")
