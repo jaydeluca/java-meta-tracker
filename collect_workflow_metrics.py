@@ -195,7 +195,6 @@ if __name__ == "__main__":
     if not github_token:
         raise ValueError("GITHUB_TOKEN environment variable not set.")
     
-    # Use the new authentication method
     auth = Auth.Token(github_token)
     g = Github(auth=auth)
 

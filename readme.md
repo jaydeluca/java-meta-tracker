@@ -58,10 +58,6 @@ To run and test this project locally, you can use Docker Compose to set up a loc
 
 This project is designed to run as a GitHub Action on a recurring schedule.
 
-### Workflow File
-
-The workflow is defined in `.github/workflows/nightly-metrics.yml`. It is configured to run every 12 hours and can also be triggered manually.
-
 ### Required GitHub Secrets
 
 To enable the GitHub Action to run successfully, you must configure the following secrets in your GitHub repository settings (`Settings` > `Secrets and variables` > `Actions`):
