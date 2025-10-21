@@ -66,7 +66,7 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
         lookback_hours: Number of hours to look back for workflow runs
     """
     print(f"Fetching workflow run metrics (last {lookback_hours} hours)...")
-    
+
     # Load previously processed runs
     state_file = get_state_file_path()
     processed_runs = load_processed_runs(state_file)
@@ -98,6 +98,7 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
         runs_incomplete = 0
         runs_skipped_branch = 0
         runs_skipped_duplicate = 0
+        runs_skipped_cancelled = 0
         newly_processed = set()
 
         for build_workflow in build_workflows:
@@ -140,6 +141,11 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
                     runs_incomplete += 1
                     continue
 
+                # Skip cancelled runs - they didn't complete the full build
+                if run.conclusion == "cancelled":
+                    runs_skipped_cancelled += 1
+                    continue
+
                 try:
                     timing_data = run.timing()
 
@@ -180,8 +186,9 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
         print(f"  Duplicate runs skipped: {runs_skipped_duplicate}")
         print(f"  Non-main branch runs skipped: {runs_skipped_branch}")
         print(f"  Incomplete runs skipped: {runs_incomplete}")
+        print(f"  Cancelled runs skipped: {runs_skipped_cancelled}")
         print(f"  Processed {runs_processed} new workflow runs")
-        
+
         # Update and save state
         all_processed = processed_runs.union(newly_processed)
         save_processed_runs(all_processed, state_file)
@@ -194,7 +201,7 @@ if __name__ == "__main__":
     github_token = os.environ.get("GITHUB_TOKEN")
     if not github_token:
         raise ValueError("GITHUB_TOKEN environment variable not set.")
-    
+
     auth = Auth.Token(github_token)
     g = Github(auth=auth)
 
@@ -204,12 +211,11 @@ if __name__ == "__main__":
     print("=" * 60)
     print("GitHub Workflow Metrics Collection")
     print("=" * 60)
-    
+
     fetch_workflow_run_metrics(g, lookback_hours=workflow_lookback_hours)
-    
+
     print("\nAll workflow metrics collected. Flushing metrics before exit...")
     provider.force_flush()
 
     print("Metrics flushed. The script will exit after 5 seconds.")
     time.sleep(5)
-
