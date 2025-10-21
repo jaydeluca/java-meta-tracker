@@ -20,11 +20,11 @@ jobs:
     
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       # Restore deduplication state from previous run
       - name: Restore state cache
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: ./state
           key: workflow-state-${{ github.run_id }}
@@ -54,14 +54,14 @@ jobs:
       # Save state for next run (always run even if previous steps fail)
       - name: Save state cache
         if: always()
-        uses: actions/cache/save@v3
+        uses: actions/cache/save@v4
         with:
           path: ./state
           key: workflow-state-${{ github.run_id }}
       
       - name: Upload state as artifact (for debugging)
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: workflow-state
           path: ./state/processed_workflow_runs.json
