@@ -1,0 +1,31 @@
+name: Collect Benchmark Metrics
+
+on:
+  schedule:
+    # Run daily at 9:00 UTC
+    - cron: '0 9 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  collect-benchmark-metrics:
+    runs-on: ubuntu-latest
+    environment: main
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build and run Docker container
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+          OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+        run: |
+          echo "OTEL_EXPORTER_OTLP_ENDPOINT is set: ${OTEL_EXPORTER_OTLP_ENDPOINT:+true}"
+          docker build -t benchmark-overhead-metrics -f Dockerfile.benchmark .
+          docker run \
+            -e OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT" \
+            -e OTEL_EXPORTER_OTLP_HEADERS="$OTEL_EXPORTER_OTLP_HEADERS" \
+            -e OTEL_EXPORTER_OTLP_PROTOCOL="$OTEL_EXPORTER_OTLP_PROTOCOL" \
+            benchmark-overhead-metrics
