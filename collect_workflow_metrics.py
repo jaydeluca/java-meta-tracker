@@ -117,15 +117,15 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
                     continue
 
                 # Track main branch builds (push events) and all PR builds (pull_request events)
-                is_pr_14748 = False
+                is_test_pr = False
 
                 if run.event == "pull_request":
-                    # Track all PR builds, but mark PR #14748 specially
+                    # Track all PR builds, but mark PR #15213 specially
                     try:
                         if hasattr(run, 'pull_requests') and len(run.pull_requests) > 0:
                             pr_number = run.pull_requests[0].number
-                            if pr_number == 14748:
-                                is_pr_14748 = True
+                            if pr_number == 15213:
+                                is_test_pr = True
                     except Exception:
                         pass
                 elif run.event == "push" and run.head_branch == "main":
@@ -163,7 +163,7 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
                         "workflow": "build",
                         "conclusion": run.conclusion or "unknown",
                         "event": run.event,
-                        "is_build_test": "true" if is_pr_14748 else "false"
+                        "is_build_test": "true" if is_test_pr else "false"
                     }
 
                     workflow_duration_histogram.record(duration_minutes, attributes)
