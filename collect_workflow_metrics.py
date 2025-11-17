@@ -170,9 +170,11 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
 
                 # Track main branch builds (push events) and all PR builds (pull_request events)
                 is_test_pr = False
+                build_type = "other"
 
                 if run.event == "pull_request":
                     # Track all PR builds, but mark PR #15213 specially
+                    build_type = "pr"
                     try:
                         if hasattr(run, 'pull_requests') and len(run.pull_requests) > 0:
                             pr_number = run.pull_requests[0].number
@@ -181,8 +183,8 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
                     except Exception:
                         pass
                 elif run.event == "push" and run.head_branch == "main":
-                    # Main branch builds
-                    pass
+                    # Main branch builds (merged PRs)
+                    build_type = "main"
                 else:
                     # Skip all other events/branches (e.g., release branches, scheduled runs)
                     runs_skipped_branch += 1
@@ -215,6 +217,7 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
                         "workflow": "build",
                         "conclusion": run.conclusion or "unknown",
                         "event": run.event,
+                        "build_type": build_type,
                         "is_build_test": "true" if is_test_pr else "false"
                     }
 
