@@ -32,6 +32,13 @@ workflow_duration_view = View(
     )
 )
 
+job_duration_view = View(
+    instrument_name="workflow.job.duration",
+    aggregation=ExplicitBucketHistogramAggregation(
+        boundaries=(1, 2, 3, 5, 7, 10, 15, 20, 25, 30, 40, 50, 60, 90, 120)
+    )
+)
+
 # OTLP exporter with cumulative temporality for Prometheus/Mimir in Grafana
 otlp_exporter = OTLPMetricExporter(
     preferred_temporality={
@@ -43,7 +50,7 @@ otlp_reader = PeriodicExportingMetricReader(otlp_exporter, export_interval_milli
 provider = MeterProvider(
     resource=resource,
     metric_readers=[otlp_reader],
-    views=[workflow_duration_view]
+    views=[workflow_duration_view, job_duration_view]
 )
 metrics.set_meter_provider(provider)
 
@@ -54,6 +61,50 @@ workflow_duration_histogram = meter.create_histogram(
     description="Duration of workflow runs in minutes",
     unit="minutes"
 )
+
+job_duration_histogram = meter.create_histogram(
+    name="workflow.job.duration",
+    description="Duration of individual workflow jobs in minutes",
+    unit="minutes"
+)
+
+
+def fetch_job_metrics(run, base_attributes: dict):
+    """
+    Fetches and records metrics for individual jobs within a workflow run.
+
+    Args:
+        run: WorkflowRun object from GitHub API
+        base_attributes: Base attributes to include with each job metric (repo, workflow, event, etc.)
+    """
+    try:
+        jobs = run.jobs()
+        jobs_recorded = 0
+
+        for job in jobs:
+            # Skip jobs that haven't completed
+            if job.status != "completed":
+                continue
+
+            # Calculate job duration
+            if job.started_at and job.completed_at:
+                duration_seconds = (job.completed_at - job.started_at).total_seconds()
+                duration_minutes = duration_seconds / 60
+
+                # Create attributes for this job
+                job_attributes = base_attributes.copy()
+                job_attributes["job_name"] = job.name
+                job_attributes["job_conclusion"] = job.conclusion or "unknown"
+
+                # Record the metric
+                job_duration_histogram.record(duration_minutes, job_attributes)
+                jobs_recorded += 1
+
+        return jobs_recorded
+
+    except Exception as e:
+        print(f"    Warning: Could not fetch jobs for run {run.id}: {e}")
+        return 0
 
 
 def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
@@ -99,6 +150,7 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
         runs_skipped_branch = 0
         runs_skipped_duplicate = 0
         runs_skipped_cancelled = 0
+        jobs_recorded = 0
         newly_processed = set()
 
         for build_workflow in build_workflows:
@@ -171,6 +223,10 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
                     if runs_processed == 0:
                         print(f"  Debug: Recording histogram value {duration_minutes} minutes with attributes {attributes}")
 
+                    # Fetch and record job-level metrics
+                    jobs_count = fetch_job_metrics(run, attributes)
+                    jobs_recorded += jobs_count
+
                     # Mark this run as processed
                     newly_processed.add(run.id)
                     runs_processed += 1
@@ -188,6 +244,7 @@ def fetch_workflow_run_metrics(github_client: Github, lookback_hours: int = 3):
         print(f"  Incomplete runs skipped: {runs_incomplete}")
         print(f"  Cancelled runs skipped: {runs_skipped_cancelled}")
         print(f"  Processed {runs_processed} new workflow runs")
+        print(f"  Recorded {jobs_recorded} job-level metrics")
 
         # Update and save state
         all_processed = processed_runs.union(newly_processed)
