@@ -41,6 +41,7 @@ def fetch_github_metrics(github_client: Github):
         "open-telemetry/opentelemetry-java",
         "open-telemetry/opentelemetry-java-contrib",
         "open-telemetry/opentelemetry-java-examples",
+        "open-telemetry/opentelemetry-ecosystem-explorer",
         "prometheus/client_java"
     ]
 
