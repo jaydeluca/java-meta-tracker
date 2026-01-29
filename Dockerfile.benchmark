@@ -7,5 +7,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY benchmark_metrics.py .
+COPY prometheus_benchmark_metrics.py .
+COPY run_benchmarks.sh .
 
-CMD ["python", "./benchmark_metrics.py"]
+RUN chmod +x run_benchmarks.sh
+
+CMD ["./run_benchmarks.sh"]

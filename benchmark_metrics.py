@@ -208,25 +208,21 @@ class BenchmarkMetricsCollector:
         for test_type in self.TEST_TYPES:
             print(f"\nProcessing {test_type} benchmarks:")
 
-            # Fetch the summary file
             summary_content = self.fetch_summary_file(test_type)
             if not summary_content:
                 print(f"  Skipping {test_type} due to fetch error")
                 continue
 
-            # Parse the report
             try:
                 report_date, metrics = self.parser.parse_report(summary_content)
                 print(f"  Report date: {report_date}")
                 print(f"  Entities found: {list(metrics.keys())}")
 
-                # Export metrics for each entity
                 for entity, entity_metrics in metrics.items():
                     print(f"\n  Entity: {entity}")
                     print(f"  {'-' * 50}")
 
                     for metric_name, value in entity_metrics.items():
-                        # Create gauge for each metric
                         full_metric_name = f"benchmark.{metric_name}"
 
                         gauge = meter.create_gauge(full_metric_name)
@@ -238,7 +234,6 @@ class BenchmarkMetricsCollector:
                             }
                         )
 
-                        # Print the metric to console
                         print(f"    {full_metric_name:<40} = {value:>12.2f}  [entity={entity}, test_type={test_type}]")
 
                 print(f"\n  Successfully exported {sum(len(m) for m in metrics.values())} metrics for {test_type}")
