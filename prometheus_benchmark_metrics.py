@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from typing import Dict, List, Optional
 
@@ -107,6 +108,7 @@ class PrometheusBenchmarkMetricsCollector:
     """Collects Prometheus client_java benchmark metrics from GitHub."""
 
     RESULTS_URL = "https://raw.githubusercontent.com/prometheus/client_java/benchmarks/results.json"
+    README_URL = "https://raw.githubusercontent.com/prometheus/client_java/benchmarks/README.md"
 
     def __init__(self):
         self.parser = JMHResultsParser()
@@ -121,6 +123,40 @@ class PrometheusBenchmarkMetricsCollector:
             print(f"  Error fetching results.json: {e}")
             return None
 
+    def fetch_readme(self) -> Optional[str]:
+        try:
+            print(f"  Fetching README.md from {self.README_URL}...")
+            response = requests.get(self.README_URL, timeout=30)
+            response.raise_for_status()
+            return response.text
+        except requests.RequestException as e:
+            print(f"  Error fetching README.md: {e}")
+            return None
+
+    def parse_processor_type(self, readme_content: str) -> str:
+        """
+        Parse the processor type from README.md.
+
+        Expected format:
+        - **Hardware:** AMD EPYC 7763 64-Core Processor, 4 cores, 16 GB RAM
+
+        Returns:
+            Processor type string or "unknown" if not found.
+        """
+        try:
+            # Look for the Hardware line in the README
+            hardware_match = re.search(r'-\s*\*\*Hardware:\*\*\s*([^,]+)', readme_content)
+            if hardware_match:
+                processor = hardware_match.group(1).strip()
+                print(f"  Found processor: {processor}")
+                return processor
+            else:
+                print("  Warning: Could not find processor information in README.md")
+                return "unknown"
+        except Exception as e:
+            print(f"  Error parsing processor type: {e}")
+            return "unknown"
+
     def collect_and_export_metrics(self):
         print("Collecting Prometheus client_java benchmark metrics...")
         print("=" * 60)
@@ -129,6 +165,14 @@ class PrometheusBenchmarkMetricsCollector:
         if not results_content:
             print("  Failed to fetch results. Exiting.")
             return
+
+        readme_content = self.fetch_readme()
+        processor_type = "unknown"
+        if readme_content:
+            processor_type = self.parse_processor_type(readme_content)
+        else:
+            print("  Warning: Could not fetch README.md, using 'unknown' for processor type")
+        print()
 
         try:
             benchmarks = self.parser.parse_results(results_content)
@@ -163,6 +207,7 @@ class PrometheusBenchmarkMetricsCollector:
                             "threads": str(benchmark["threads"]),
                             "forks": str(benchmark["forks"]),
                             "unit": benchmark["score_unit"],
+                            "processor": processor_type,
                         }
                     )
 
@@ -176,6 +221,7 @@ class PrometheusBenchmarkMetricsCollector:
                             "threads": str(benchmark["threads"]),
                             "forks": str(benchmark["forks"]),
                             "unit": benchmark["score_unit"],
+                            "processor": processor_type,
                         }
                     )
 

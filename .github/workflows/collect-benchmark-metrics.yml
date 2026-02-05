@@ -2,8 +2,8 @@ name: Collect Benchmark Metrics
 
 on:
   schedule:
-    # Run hourly to keep grafana graphs happy
-    - cron: '0 * * * *'
+    # Run every 30 minutes to keep grafana graphs happy
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
